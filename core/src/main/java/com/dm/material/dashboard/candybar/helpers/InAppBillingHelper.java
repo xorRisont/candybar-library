@@ -41,24 +41,24 @@ public class InAppBillingHelper implements BillingProcessor.IBillingHandler {
 
     @Override
     public void onProductPurchased(String productId, TransactionDetails details) {
-        if (Preferences.getPreferences(mContext).getInAppBillingType()
+        if (Preferences.get(mContext).getInAppBillingType()
                 == InAppBillingHelper.DONATE) {
             try {
                 InAppBillingListener listener = (InAppBillingListener) mContext;
-                listener.OnInAppBillingConsume(Preferences.getPreferences(mContext)
+                listener.onInAppBillingConsume(Preferences.get(mContext)
                         .getInAppBillingType(), productId);
             } catch (Exception ignored) {}
-        } else if (Preferences.getPreferences(mContext).getInAppBillingType() ==
+        } else if (Preferences.get(mContext).getInAppBillingType() ==
                 InAppBillingHelper.PREMIUM_REQUEST) {
-            Preferences.getPreferences(mContext).setPremiumRequest(true);
-            Preferences.getPreferences(mContext).setPremiumRequestProductId(productId);
+            Preferences.get(mContext).setPremiumRequest(true);
+            Preferences.get(mContext).setPremiumRequestProductId(productId);
             try {
                 RequestListener listener = (RequestListener) mContext;
-                listener.OnPremiumRequestBought();
+                listener.onPremiumRequestBought();
             } catch (Exception ignored) {}
         }
 
-        Preferences.getPreferences(mContext).setInAppBillingType(-1);
+        Preferences.get(mContext).setInAppBillingType(-1);
     }
 
     @Override
@@ -69,14 +69,16 @@ public class InAppBillingHelper implements BillingProcessor.IBillingHandler {
     @Override
     public void onBillingError(int errorCode, Throwable error) {
         if (errorCode == Constants.BILLING_RESPONSE_RESULT_USER_CANCELED) {
-            if (Preferences.getPreferences(mContext).getInAppBillingType()
-                    == InAppBillingHelper.PREMIUM_REQUEST)
-                Preferences.getPreferences(mContext).setPremiumRequestCount(0);
-            Preferences.getPreferences(mContext).setInAppBillingType(-1);
+            if (Preferences.get(mContext).getInAppBillingType()
+                    == InAppBillingHelper.PREMIUM_REQUEST) {
+                Preferences.get(mContext).setPremiumRequestCount(0);
+                Preferences.get(mContext).setPremiumRequestTotal(0);
+            }
+            Preferences.get(mContext).setInAppBillingType(-1);
         } else if (errorCode == Constants.BILLING_ERROR_FAILED_TO_INITIALIZE_PURCHASE) {
             try {
                 InAppBillingListener listener = (InAppBillingListener) mContext;
-                listener.OnInAppBillingInitialized(false);
+                listener.onInAppBillingInitialized(false);
             } catch (Exception ignored) {}
         }
     }
@@ -85,8 +87,27 @@ public class InAppBillingHelper implements BillingProcessor.IBillingHandler {
     public void onBillingInitialized() {
         try {
             InAppBillingListener listener = (InAppBillingListener) mContext;
-            listener.OnInAppBillingInitialized(true);
+            listener.onInAppBillingInitialized(true);
         } catch (Exception ignored) {}
     }
 
+    public static class Property {
+
+        public final boolean licenseChecker;
+        public final byte[] salt;
+        public final String licenseKey;
+        public final String[] donationProductsId;
+        public final String[] premiumRequestProductsId;
+        public final int[] premiumRequestProductsCount;
+
+        public Property(boolean licenseChecker, byte[] salt, String licenseKey, String[] donationProductsId,
+                        String[] premiumRequestProductsId, int[] premiumRequestProductsCount) {
+            this.licenseChecker = licenseChecker;
+            this.salt = salt;
+            this.licenseKey = licenseKey;
+            this.donationProductsId = donationProductsId;
+            this.premiumRequestProductsId = premiumRequestProductsId;
+            this.premiumRequestProductsCount = premiumRequestProductsCount;
+        }
+    }
 }

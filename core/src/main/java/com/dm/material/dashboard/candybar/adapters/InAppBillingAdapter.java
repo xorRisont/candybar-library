@@ -11,7 +11,6 @@ import android.widget.TextView;
 
 import com.dm.material.dashboard.candybar.R;
 import com.dm.material.dashboard.candybar.items.InAppBilling;
-import com.dm.material.dashboard.candybar.preferences.Preferences;
 
 /*
  * CandyBar - Material Dashboard
@@ -68,38 +67,38 @@ public class InAppBillingAdapter extends BaseAdapter {
         } else {
             holder = (ViewHolder) view.getTag();
         }
+        if (position >= 0 && position < mInAppBillings.length) {
+            final InAppBilling inAppBilling = mInAppBillings[position];
+            if (inAppBilling != null) {
+                holder.radio.setChecked(mSelectedPosition == position);
 
-        holder.radio.setChecked(mSelectedPosition == position);
+                String product = inAppBilling.getPrice() +" - "+
+                        inAppBilling.getProductName();
+                holder.name.setText(product);
 
-        String product = mInAppBillings[position].getPrice() +" - "+
-                mInAppBillings[position].getProductName();
-        holder.name.setText(product);
-
-        holder.container.setOnClickListener(v -> {
-            mSelectedPosition = position;
-            notifyDataSetChanged();
-        });
-
+                holder.container.setOnClickListener(v -> {
+                    mSelectedPosition = position;
+                    notifyDataSetChanged();
+                });
+            }
+        }
         return view;
     }
 
     private class ViewHolder {
 
-        final AppCompatRadioButton radio;
-        final TextView name;
-        final LinearLayout container;
+        private final AppCompatRadioButton radio;
+        private final TextView name;
+        private final LinearLayout container;
 
         ViewHolder(View view) {
             radio = (AppCompatRadioButton) view.findViewById(R.id.radio);
             name = (TextView) view.findViewById(R.id.name);
             container = (LinearLayout) view.findViewById(R.id.container);
-            container.setBackgroundResource(Preferences.getPreferences(mContext).isDarkTheme() ?
-                    R.drawable.card_item_list_dark : R.drawable.card_item_list);
         }
     }
 
     public InAppBilling getSelectedProduct() {
         return mInAppBillings[mSelectedPosition];
     }
-
 }

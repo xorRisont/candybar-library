@@ -1,69 +1,60 @@
 package com.dm.material.dashboard.candybar.fragments;
 
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
-import android.graphics.Bitmap;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
-import android.support.v4.util.SparseArrayCompat;
-import android.support.v4.view.GravityCompat;
-import android.support.v4.view.ViewCompat;
-import android.support.v7.widget.AppCompatButton;
+import android.support.v4.view.animation.LinearOutSlowInInterpolator;
 import android.support.v7.widget.DefaultItemAnimator;
-import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.util.Log;
-import android.view.Gravity;
+import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.anjlab.android.iab.v3.BillingProcessor;
 import com.anjlab.android.iab.v3.TransactionDetails;
+import com.danimahardhika.android.helpers.animation.AnimationHelper;
+import com.danimahardhika.android.helpers.core.ColorHelper;
+import com.danimahardhika.android.helpers.core.DrawableHelper;
+import com.danimahardhika.android.helpers.core.FileHelper;
+import com.danimahardhika.android.helpers.core.ViewHelper;
 import com.dm.material.dashboard.candybar.R;
+import com.dm.material.dashboard.candybar.activities.CandyBarMainActivity;
 import com.dm.material.dashboard.candybar.adapters.RequestAdapter;
-import com.dm.material.dashboard.candybar.databases.Database;
+import com.dm.material.dashboard.candybar.applications.CandyBarApplication;
 import com.dm.material.dashboard.candybar.fragments.dialog.IntentChooserFragment;
-import com.dm.material.dashboard.candybar.helpers.ColorHelper;
-import com.dm.material.dashboard.candybar.helpers.DeviceHelper;
-import com.dm.material.dashboard.candybar.helpers.DrawableHelper;
-import com.dm.material.dashboard.candybar.helpers.FileHelper;
-import com.dm.material.dashboard.candybar.helpers.LocaleHelper;
+import com.dm.material.dashboard.candybar.helpers.IconsHelper;
 import com.dm.material.dashboard.candybar.helpers.RequestHelper;
-import com.dm.material.dashboard.candybar.helpers.ViewHelper;
+import com.dm.material.dashboard.candybar.helpers.TapIntroHelper;
+import com.dm.material.dashboard.candybar.helpers.TypefaceHelper;
 import com.dm.material.dashboard.candybar.items.Request;
 import com.dm.material.dashboard.candybar.preferences.Preferences;
-import com.dm.material.dashboard.candybar.utils.Animator;
-import com.dm.material.dashboard.candybar.utils.Tag;
+import com.dm.material.dashboard.candybar.utils.LogUtil;
 import com.dm.material.dashboard.candybar.utils.listeners.InAppBillingListener;
-import com.dm.material.dashboard.candybar.utils.listeners.RequestListener;
 import com.pluscubed.recyclerfastscroll.RecyclerFastScroller;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
+
+import static com.dm.material.dashboard.candybar.helpers.DrawableHelper.getHighQualityIcon;
+import static com.dm.material.dashboard.candybar.helpers.ViewHelper.setFastScrollColor;
 
 /*
  * CandyBar - Material Dashboard
@@ -85,30 +76,32 @@ import java.util.Locale;
 
 public class RequestFragment extends Fragment implements View.OnClickListener {
 
-    private RecyclerView mRequestList;
+    private RecyclerView mRecyclerView;
     private FloatingActionButton mFab;
     private RecyclerFastScroller mFastScroll;
     private ProgressBar mProgress;
 
+    private MenuItem mMenuItem;
     private RequestAdapter mAdapter;
-    private AsyncTask<Void, Request, Boolean> mGetMissingApps;
+    private StaggeredGridLayoutManager mManager;
+    private AsyncTask<Void, Void, Boolean> mGetMissingApps;
+    private AsyncTask<Void, Void, Boolean> mSendRequest;
+
+    public static List<Integer> sSelectedRequests;
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_request, container, false);
-        mRequestList = (RecyclerView) view.findViewById(R.id.request_list);
+        mRecyclerView = (RecyclerView) view.findViewById(R.id.request_list);
         mFab = (FloatingActionButton) view.findViewById(R.id.fab);
         mFastScroll = (RecyclerFastScroller) view.findViewById(R.id.fastscroll);
         mProgress = (ProgressBar) view.findViewById(R.id.progress);
 
-        LinearLayout premiumRequestBar = (LinearLayout) view.findViewById(R.id.premium_request_bar);
-        if (Preferences.getPreferences(getActivity()).isPremiumRequestEnabled()) {
-            Animator.startSlideDownAnimation(getActivity(), premiumRequestBar, view.findViewById(R.id.shadow));
-        } else {
-            premiumRequestBar.setVisibility(View.GONE);
-            Animator.startAlphaAnimation(view.findViewById(R.id.shadow), 200, View.VISIBLE);
+        if (!Preferences.get(getActivity()).isToolbarShadowEnabled()) {
+            View shadow = view.findViewById(R.id.shadow);
+            if (shadow != null) shadow.setVisibility(View.GONE);
         }
         return view;
     }
@@ -117,8 +110,7 @@ public class RequestFragment extends Fragment implements View.OnClickListener {
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         setHasOptionsMenu(false);
-        ViewCompat.setNestedScrollingEnabled(mRequestList, false);
-        resetNavigationBarMargin();
+        resetRecyclerViewPadding(getActivity().getResources().getConfiguration().orientation);
 
         mProgress.getIndeterminateDrawable().setColorFilter(
                 ColorHelper.getAttributeColor(getActivity(), R.attr.colorAccent),
@@ -130,53 +122,72 @@ public class RequestFragment extends Fragment implements View.OnClickListener {
                 getActivity(), R.drawable.ic_fab_send, color));
         mFab.setOnClickListener(this);
 
-        mRequestList.setItemAnimator(new DefaultItemAnimator());
-        mRequestList.getItemAnimator().setChangeDuration(0);
-        mRequestList.setHasFixedSize(false);
-        mRequestList.setLayoutManager(new GridLayoutManager(getActivity(),
-                getActivity().getResources().getConfiguration().orientation ==
-                        Configuration.ORIENTATION_PORTRAIT ? 1 : 2));
-        mFastScroll.attachRecyclerView(mRequestList);
+        if (!Preferences.get(getActivity()).isFabShadowEnabled()) {
+            mFab.setCompatElevation(0f);
+        }
 
-        initPremiumRequest();
+        mRecyclerView.setItemAnimator(new DefaultItemAnimator());
+        mRecyclerView.getItemAnimator().setChangeDuration(0);
+        mRecyclerView.setHasFixedSize(false);
+
+        mManager = new StaggeredGridLayoutManager(
+                getActivity().getResources().getInteger(R.integer.request_column_count),
+                StaggeredGridLayoutManager.VERTICAL);
+        mRecyclerView.setLayoutManager(mManager);
+
+        setFastScrollColor(mFastScroll);
+        mFastScroll.attachRecyclerView(mRecyclerView);
+
         getMissingApps();
     }
 
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        resetNavigationBarMargin();
-        if (mRequestList == null) return;
-        if (mRequestList.getLayoutManager() == null) return;
+        resetRecyclerViewPadding(newConfig.orientation);
+        if (mGetMissingApps != null) return;
 
-        GridLayoutManager manager = (GridLayoutManager) mRequestList.getLayoutManager();
-        if (manager != null) manager.setSpanCount(newConfig.orientation ==
-                Configuration.ORIENTATION_PORTRAIT ? 1 : 2);
+        int[] positions = mManager.findFirstVisibleItemPositions(null);
+
+        SparseBooleanArray selectedItems = mAdapter.getSelectedItemsArray();
+        ViewHelper.resetSpanCount(mRecyclerView,
+                getActivity().getResources().getInteger(R.integer.request_column_count));
+
+        mAdapter = new RequestAdapter(getActivity(),
+                CandyBarMainActivity.sMissedApps,
+                mManager.getSpanCount());
+        mRecyclerView.setAdapter(mAdapter);
+        mAdapter.setSelectedItemsArray(selectedItems);
+
+        if (positions.length > 0)
+            mRecyclerView.scrollToPosition(positions[0]);
     }
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         inflater.inflate(R.menu.menu_request, menu);
-        MenuItem rebuild = menu.findItem(R.id.menu_rebuild_premium);
-        rebuild.setVisible(Preferences.getPreferences(getActivity()).isPremiumRequestEnabled());
         super.onCreateOptionsMenu(menu, inflater);
     }
 
     @Override
     public void onDestroy() {
         if (mGetMissingApps != null) mGetMissingApps.cancel(true);
+        if (mSendRequest != null) mSendRequest.cancel(true);
         super.onDestroy();
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.menu_rebuild_premium) {
-            rebuildPremiumRequest();
-            return true;
-        } else if (id == R.id.menu_select_all) {
+        if (id == R.id.menu_select_all) {
+            mMenuItem = item;
             if (mAdapter == null) return false;
-            mAdapter.selectAll();
+            if (mAdapter.selectAll()) {
+                item.setIcon(R.drawable.ic_toolbar_select_all_selected);
+                return true;
+            }
+
+            item.setIcon(R.drawable.ic_toolbar_select_all);
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -202,8 +213,8 @@ public class RequestFragment extends Fragment implements View.OnClickListener {
                 boolean premiumRequest = getActivity().getResources().getBoolean(
                         R.bool.enable_premium_request);
 
-                if (Preferences.getPreferences(getActivity()).isPremiumRequest()) {
-                    int count = Preferences.getPreferences(getActivity()).getPremiumRequestCount();
+                if (Preferences.get(getActivity()).isPremiumRequest()) {
+                    int count = Preferences.get(getActivity()).getPremiumRequestCount();
                     if (selected > count) {
                         RequestHelper.showPremiumRequestLimitDialog(getActivity(), selected);
                         return;
@@ -213,7 +224,7 @@ public class RequestFragment extends Fragment implements View.OnClickListener {
 
                     try {
                         InAppBillingListener listener = (InAppBillingListener) getActivity();
-                        listener.OnInAppBillingRequest();
+                        listener.onInAppBillingRequest();
                     } catch (Exception ignored) {}
                     return;
                 }
@@ -225,13 +236,11 @@ public class RequestFragment extends Fragment implements View.OnClickListener {
 
                 if (requestLimit) {
                     int limit = getActivity().getResources().getInteger(R.integer.icon_request_limit);
-                    int used = Preferences.getPreferences(getActivity()).getRegularRequestUsed();
+                    int used = Preferences.get(getActivity()).getRegularRequestUsed();
                     if (selected > (limit - used)) {
                         RequestHelper.showIconRequestLimitDialog(getActivity());
                         return;
                     }
-
-                    Preferences.getPreferences(getActivity()).setRegularRequestUsed(selected);
                 }
 
                 sendRequest(null);
@@ -239,86 +248,60 @@ public class RequestFragment extends Fragment implements View.OnClickListener {
                 Toast.makeText(getActivity(), R.string.request_not_selected,
                         Toast.LENGTH_LONG).show();
             }
-        } else if (id == R.id.premium_request_buy) {
-            RequestListener listener = (RequestListener) getActivity();
-            listener.OnBuyPremiumRequest();
         }
     }
 
-    private void initPremiumRequest() {
-        boolean premiumRequest = Preferences.getPreferences(getActivity()).isPremiumRequestEnabled();
-        if (premiumRequest) {
-            int accent = ColorHelper.getAttributeColor(getActivity(), R.attr.colorAccent);
-            AppCompatButton buy = (AppCompatButton) getActivity().findViewById(R.id.premium_request_buy);
-            buy.setTextColor(ColorHelper.getTitleTextColor(accent));
-            buy.setOnClickListener(this);
+    private void resetRecyclerViewPadding(int orientation) {
+        if (mRecyclerView == null) return;
 
-            int toolbarIcon = ColorHelper.getAttributeColor(getActivity(), R.attr.toolbar_icon);
-            TextView desc = (TextView) getActivity().findViewById(R.id.premium_request_desc);
-            desc.setTextColor(ColorHelper.setColorAlpha(toolbarIcon, 0.6f));
+        int padding = 0;
+        boolean tabletMode = getActivity().getResources().getBoolean(R.bool.android_helpers_tablet_mode);
+        if (tabletMode || orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            padding = getActivity().getResources().getDimensionPixelSize(R.dimen.content_padding);
 
-            initPremiumRequestCount();
-        }
-    }
-
-    private void initPremiumRequestCount() {
-        TextView count = (TextView) getActivity().findViewById(R.id.premium_request_count);
-        if (Preferences.getPreferences(getActivity()).isPremiumRequest()) {
-            String countText = getActivity().getResources().getString(R.string.premium_request_count)
-                    +" "+ Preferences.getPreferences(getActivity()).getPremiumRequestCount();
-            count.setText(countText);
-            count.setVisibility(View.VISIBLE);
-            AppCompatButton buy = (AppCompatButton) getActivity().findViewById(R.id.premium_request_buy);
-            buy.setVisibility(View.GONE);
-            return;
+            if (CandyBarApplication.getConfiguration().getRequestStyle() == CandyBarApplication.Style.PORTRAIT_FLAT_LANDSCAPE_FLAT) {
+                padding = getActivity().getResources().getDimensionPixelSize(R.dimen.card_margin);
+            }
         }
 
-        count.setVisibility(View.GONE);
-        AppCompatButton buy = (AppCompatButton) getActivity().findViewById(R.id.premium_request_buy);
-        buy.setVisibility(View.VISIBLE);
+        int size = getActivity().getResources().getDimensionPixelSize(R.dimen.fab_size);
+        int marginGlobal = getActivity().getResources().getDimensionPixelSize(R.dimen.fab_margin_global);
+
+        mRecyclerView.setPadding(padding, padding, 0, size + (marginGlobal * 2));
     }
 
-    public void OnInAppBillingSent(BillingProcessor billingProcessor) {
+    public void prepareRequest(BillingProcessor billingProcessor) {
         sendRequest(billingProcessor);
     }
 
-    public void premiumRequestBought() {
-        initPremiumRequestCount();
-    }
-
-    private void resetNavigationBarMargin() {
-        int padding = getActivity().getResources().getDimensionPixelSize(R.dimen.content_padding);
-        int size = getActivity().getResources().getDimensionPixelSize(R.dimen.fab_size);
-        int margin = getActivity().getResources().getDimensionPixelSize(R.dimen.fab_margin);
-        int marginGlobal = getActivity().getResources().getDimensionPixelSize(R.dimen.fab_margin_global);
-        int navBar = 0;
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            navBar = ViewHelper.getNavigationBarHeight(getActivity());
+    public void refreshIconRequest() {
+        if (mAdapter == null) {
+            RequestFragment.sSelectedRequests = null;
+            return;
         }
 
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(size, size);
-        if (getActivity().getResources().getConfiguration().orientation
-                == Configuration.ORIENTATION_PORTRAIT) {
-            mRequestList.setPadding(padding, padding, padding, (padding + size + marginGlobal + navBar));
-            params.setMargins(0, 0, margin, (margin + navBar));
-        } else {
-            mRequestList.setPadding(padding, padding, padding, (padding + size + marginGlobal));
-            params.setMargins(0, 0, margin, margin);
+        if (RequestFragment.sSelectedRequests == null)
+            mAdapter.notifyItemChanged(0);
+
+        for (Integer integer : RequestFragment.sSelectedRequests) {
+            mAdapter.setRequested(integer, true);
         }
-        params.gravity = GravityCompat.END | Gravity.BOTTOM;
-        mFab.setLayoutParams(params);
+
+        mAdapter.notifyDataSetChanged();
+        RequestFragment.sSelectedRequests = null;
     }
 
     private void getMissingApps() {
-        mGetMissingApps = new AsyncTask<Void, Request, Boolean>() {
+        mGetMissingApps = new AsyncTask<Void, Void, Boolean>() {
+
+            List<Request> requests;
 
             @Override
             protected void onPreExecute() {
                 super.onPreExecute();
-                mAdapter = new RequestAdapter(getActivity(), new SparseArrayCompat<>());
-                mRequestList.setAdapter(mAdapter);
-                mProgress.setVisibility(View.VISIBLE);
+                if (CandyBarMainActivity.sMissedApps == null) {
+                    mProgress.setVisibility(View.VISIBLE);
+                }
             }
 
             @Override
@@ -326,44 +309,14 @@ public class RequestFragment extends Fragment implements View.OnClickListener {
                 while (!isCancelled()) {
                     try {
                         Thread.sleep(1);
-                        Database database = new Database(getActivity());
-                        PackageManager packageManager = getActivity().getPackageManager();
-                        String activities = RequestHelper.loadAppFilter(getActivity());
-
-                        Intent intent = new Intent(Intent.ACTION_MAIN);
-                        intent.addCategory(Intent.CATEGORY_LAUNCHER);
-                        List<ResolveInfo> apps = packageManager.queryIntentActivities(
-                                intent, PackageManager.GET_RESOLVED_FILTER);
-
-                        try {
-                            Collections.sort(apps, new ResolveInfo.DisplayNameComparator(
-                                    getActivity().getPackageManager()));
-                        } catch (Exception ignored) {}
-
-                        for (ResolveInfo app : apps) {
-                            String packageName = app.activityInfo.packageName;
-                            String activity = packageName +"/"+ app.activityInfo.name;
-
-                            if (!activities.contains(activity)) {
-                                String name = LocaleHelper.getOtherAppLocaleName(
-                                        getActivity(), new Locale("en-US"), packageName);
-                                if (name == null)
-                                    name = app.activityInfo.loadLabel(packageManager).toString();
-
-                                Drawable drawable = DrawableHelper.getAppIcon(getActivity(), app);
-                                byte[] bytes = DrawableHelper.getBitmapByte(drawable);
-                                boolean requested = database.isRequested(activity);
-                                publishProgress(new Request(
-                                        bytes,
-                                        name,
-                                        app.activityInfo.packageName,
-                                        activity,
-                                        requested));
-                            }
+                        if (CandyBarMainActivity.sMissedApps == null) {
+                            CandyBarMainActivity.sMissedApps = RequestHelper.getMissingApps(getActivity());
                         }
+
+                        requests = CandyBarMainActivity.sMissedApps;
                         return true;
                     } catch (Exception e) {
-                        Log.d(Tag.LOG_TAG, Log.getStackTraceString(e));
+                        LogUtil.e(Log.getStackTraceString(e));
                         return false;
                     }
                 }
@@ -371,49 +324,50 @@ public class RequestFragment extends Fragment implements View.OnClickListener {
             }
 
             @Override
-            protected void onProgressUpdate(Request... values) {
-                super.onProgressUpdate(values);
-                mAdapter.addRequest(values[0]);
-            }
-
-            @Override
             protected void onPostExecute(Boolean aBoolean) {
                 super.onPostExecute(aBoolean);
+                mGetMissingApps = null;
                 mProgress.setVisibility(View.GONE);
                 if (aBoolean) {
                     setHasOptionsMenu(true);
-                    Animator.showFab(mFab);
+                    mAdapter = new RequestAdapter(getActivity(),
+                            requests, mManager.getSpanCount());
+                    mRecyclerView.setAdapter(mAdapter);
+
+                    AnimationHelper.show(mFab)
+                            .interpolator(new LinearOutSlowInInterpolator())
+                            .start();
+
+                    TapIntroHelper.showRequestIntro(getActivity(), mRecyclerView);
                 } else {
-                    mRequestList.setAdapter(null);
+                    mRecyclerView.setAdapter(null);
                     Toast.makeText(getActivity(), getActivity().getResources().getString(
                             R.string.request_appfilter_failed), Toast.LENGTH_LONG).show();
                 }
-                mGetMissingApps = null;
             }
 
         }.execute();
     }
 
     private void sendRequest(BillingProcessor billingProcessor) {
-        new AsyncTask<Void, Void, Boolean>() {
+        mSendRequest = new AsyncTask<Void, Void, Boolean>() {
 
             MaterialDialog dialog;
-            StringBuilder sb;
-            String zipFile;
-            String productId = "";
-            String orderId = "";
+            boolean noEmailClientError = false;
 
             @Override
             protected void onPreExecute() {
                 super.onPreExecute();
-                sb = new StringBuilder();
-
                 MaterialDialog.Builder builder = new MaterialDialog.Builder(getActivity());
+                builder.typeface(
+                        TypefaceHelper.getMedium(getActivity()),
+                        TypefaceHelper.getRegular(getActivity()));
                 builder.content(R.string.request_building);
                 builder.cancelable(false);
                 builder.canceledOnTouchOutside(false);
                 builder.progress(true, 0);
                 builder.progressIndeterminateStyle(true);
+
                 dialog = builder.build();
                 dialog.show();
             }
@@ -423,75 +377,59 @@ public class RequestFragment extends Fragment implements View.OnClickListener {
                 while (!isCancelled()) {
                     try {
                         Thread.sleep(1);
-                        Database database = new Database(getActivity());
-                        File directory = getActivity().getCacheDir();
-                        sb.append(DeviceHelper.getDeviceInfo(getActivity()));
+                        Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.fromParts("mailto",
+                                getActivity().getResources().getString(R.string.dev_email),
+                                null));
+                        List<ResolveInfo> resolveInfos = getActivity().getPackageManager()
+                                .queryIntentActivities(intent, 0);
+                        if (resolveInfos.size() == 0) {
+                            noEmailClientError = true;
+                            return false;
+                        }
 
-                        if (Preferences.getPreferences(getActivity()).isPremiumRequest()) {
+                        if (Preferences.get(getActivity()).isPremiumRequest()) {
                             if (billingProcessor == null) return false;
                             TransactionDetails details = billingProcessor.getPurchaseTransactionDetails(
-                                    Preferences.getPreferences(getActivity()).getPremiumRequestProductId());
-                            if (details != null) {
-                                orderId = details.purchaseInfo.purchaseData.orderId;
-                                productId = details.purchaseInfo.purchaseData.productId;
-                                sb.append("Order Id : ").append(orderId)
-                                        .append("\nProduct Id : ").append(productId)
-                                        .append("\n");
-                            }
+                                    Preferences.get(getActivity()).getPremiumRequestProductId());
+                            if (details == null) return false;
+
+                            CandyBarApplication.sRequestProperty = new Request.Property(null,
+                                    details.purchaseInfo.purchaseData.orderId,
+                                    details.purchaseInfo.purchaseData.productId);
                         }
 
-                        SparseArrayCompat<Integer> selectedItems = mAdapter.getSelectedItems();
-                        SparseArrayCompat<String> files = new SparseArrayCompat<>();
-                        File fileDir = new File(directory.toString() + "/" + "appfilter.xml");
+                        RequestFragment.sSelectedRequests = mAdapter.getSelectedItems();
+                        List<Request> requests = mAdapter.getSelectedApps();
+                        File appFilter = RequestHelper.buildXml(getActivity(), requests, RequestHelper.XmlType.APPFILTER);
+                        File appMap = RequestHelper.buildXml(getActivity(), requests, RequestHelper.XmlType.APPMAP);
+                        File themeResources = RequestHelper.buildXml(getActivity(), requests, RequestHelper.XmlType.THEME_RESOURCES);
 
-                        Writer out = new BufferedWriter(new OutputStreamWriter(
-                                new FileOutputStream(fileDir), "UTF8"));
-                        StringBuilder activity = new StringBuilder();
-                        for (int i = 0; i < selectedItems.size(); i++) {
-                            Request item = mAdapter.getRequest(selectedItems.get(i));
-                            database.addRequest(item.getName(), item.getActivity(), null);
-                            mAdapter.setRequested(selectedItems.get(i), true);
+                        File directory = getActivity().getCacheDir();
+                        List<String> files = new ArrayList<>();
 
-                            String link = "https://play.google.com/store/apps/details?id=";
-                            activity.append("\n\n")
-                                    .append(item.getName())
-                                    .append("\n")
-                                    .append(item.getActivity())
-                                    .append("\n")
-                                    .append(link).append(item.getPackageName());
-
-                            out.append("<!-- ").append(item.getName()).append(" -->");
-                            out.append("\n");
-                            out.append("<item component=\"ComponentInfo{")
-                                    .append(item.getActivity())
-                                    .append("}\" drawable=\"")
-                                    .append(item.getName().toLowerCase().replace(" ", "_"))
-                                    .append("\" />");
-                            out.append("\n\n");
-
-                            Bitmap bitmap = DrawableHelper.getHighQualityIcon(
-                                    getActivity(), item.getPackageName());
-                            if (bitmap == null) bitmap = DrawableHelper.getBitmap(item.getIcon(), false);
-
-                            String icon = FileHelper.saveIcon(directory, bitmap, item.getName());
-                            if (icon != null) files.append(files.size(), icon);
+                        for (Request request : requests) {
+                            Drawable drawable = getHighQualityIcon(getActivity(), request.getPackageName());
+                            String icon = IconsHelper.saveIcon(files, directory, drawable, request.getName());
+                            if (icon != null) files.add(icon);
                         }
 
-                        sb.append(activity.toString());
-
-                        if (Preferences.getPreferences(getActivity()).isPremiumRequest()) {
-                            database.addPremiumRequest(orderId, productId, activity.toString());
+                        if (appFilter != null) {
+                            files.add(appFilter.toString());
                         }
 
-                        out.flush();
-                        out.close();
-                        files.append(files.size(), fileDir.toString());
+                        if (appMap != null) {
+                            files.add(appMap.toString());
+                        }
 
-                        zipFile = directory.toString() + "/" + "icon_request.zip";
-                        FileHelper.createZip(files, zipFile);
+                        if (themeResources != null) {
+                            files.add(themeResources.toString());
+                        }
+
+                        CandyBarApplication.sZipPath = FileHelper.createZip(files, new File(directory.toString(),
+                                RequestHelper.getGeneratedZipName(RequestHelper.ZIP)));
                         return true;
                     } catch (Exception e) {
-                        Log.d(Tag.LOG_TAG, Log.getStackTraceString(e));
+                        LogUtil.e(Log.getStackTraceString(e));
                         return false;
                     }
                 }
@@ -501,99 +439,25 @@ public class RequestFragment extends Fragment implements View.OnClickListener {
             @Override
             protected void onPostExecute(Boolean aBoolean) {
                 super.onPostExecute(aBoolean);
+                mSendRequest = null;
+
                 dialog.dismiss();
                 if (aBoolean) {
-                    String subject = Preferences.getPreferences(getActivity()).isPremiumRequest() ?
-                            "Premium Icon Request " : "Icon Request ";
-                    subject = subject + getActivity().getResources().getString(R.string.app_name);
+                    IntentChooserFragment.showIntentChooserDialog(getActivity().getSupportFragmentManager(),
+                            IntentChooserFragment.ICON_REQUEST);
 
-                    Request request = new Request(subject, sb.toString(),
-                            zipFile, mAdapter.getSelectedItemsSize());
-                    try {
-                        RequestListener listener = (RequestListener) getActivity();
-                        listener.OnRequestBuilt(request);
-                    } catch (Exception ignored) {}
                     mAdapter.resetSelectedItems();
+                    if (mMenuItem != null) mMenuItem.setIcon(R.drawable.ic_toolbar_select_all);
                 } else {
-                    Toast.makeText(getActivity(), R.string.request_build_failed,
-                            Toast.LENGTH_LONG).show();
-                }
-                dialog = null;
-                sb.setLength(0);
-                sb.trimToSize();
-            }
-
-        }.execute();
-    }
-
-    private void rebuildPremiumRequest() {
-        new AsyncTask<Void, Void, Boolean>() {
-
-            MaterialDialog dialog;
-            StringBuilder sb;
-            SparseArrayCompat<Request> requests;
-
-            @Override
-            protected void onPreExecute() {
-                super.onPreExecute();
-                sb = new StringBuilder();
-
-                MaterialDialog.Builder builder = new MaterialDialog.Builder(getActivity());
-                builder.content(R.string.premium_request_rebuilding);
-                builder.cancelable(false);
-                builder.canceledOnTouchOutside(false);
-                builder.progress(true, 0);
-                builder.progressIndeterminateStyle(true);
-                dialog = builder.build();
-                dialog.show();
-            }
-
-            @Override
-            protected Boolean doInBackground(Void... voids) {
-                while (!isCancelled()) {
-                    try {
-                        Thread.sleep(1);
-                        Database database = new Database(getActivity());
-                        requests = database.getPremiumRequest();
-                        sb.append(DeviceHelper.getDeviceInfo(getActivity()));
-
-                        for (int i = 0; i < requests.size(); i++) {
-                            sb.append("\n\nOrder Id : ").append(requests.get(i).getOrderId())
-                                    .append("\nProduct Id : ").append(requests.get(i).getProductId())
-                                    .append(requests.get(i).getRequest());
-                        }
-                        return true;
-                    } catch (Exception e) {
-                        Log.d(Tag.LOG_TAG, Log.getStackTraceString(e));
-                        return false;
-                    }
-                }
-                return false;
-            }
-
-            @Override
-            protected void onPostExecute(Boolean aBoolean) {
-                super.onPostExecute(aBoolean);
-                dialog.dismiss();
-                if (aBoolean) {
-                    if (requests.size() == 0) {
-                        Toast.makeText(getActivity(), R.string.premium_request_rebuilding_empty,
+                    if (noEmailClientError) {
+                        Toast.makeText(getActivity(), R.string.no_email_app,
                                 Toast.LENGTH_LONG).show();
-                        return;
+                    } else {
+                        Toast.makeText(getActivity(), R.string.request_build_failed,
+                                Toast.LENGTH_LONG).show();
                     }
-
-                    String subject = "Rebuild Premium Icon Request "+
-                            getActivity().getResources().getString(R.string.app_name);
-
-                    Request request = new Request(subject, sb.toString(), "");
-                    IntentChooserFragment.showIntentChooserDialog(getActivity()
-                            .getSupportFragmentManager(), request);
                 }
-                dialog = null;
-                sb.setLength(0);
             }
-
         }.execute();
     }
-
 }

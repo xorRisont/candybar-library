@@ -5,9 +5,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.URLUtil;
 
+import com.danimahardhika.android.helpers.permission.PermissionHelper;
+import com.dm.material.dashboard.candybar.databases.Database;
 import com.google.android.apps.muzei.api.Artwork;
 import com.google.android.apps.muzei.api.RemoteMuzeiArtSource;
-import com.dm.material.dashboard.candybar.helpers.FileHelper;
 import com.dm.material.dashboard.candybar.helpers.MuzeiHelper;
 import com.dm.material.dashboard.candybar.helpers.WallpaperHelper;
 import com.dm.material.dashboard.candybar.items.Wallpaper;
@@ -66,34 +67,41 @@ public abstract class CandyBarMuzeiService extends RemoteMuzeiArtSource {
 
         try {
             Wallpaper wallpaper = null;
-            if (Preferences.getPreferences(this).isDownloadedOnly())
+            if (Preferences.get(this).isDownloadedOnly()) {
                 wallpaper = mMuzeiHelper.getRandomDownloadedWallpaper();
+            }
 
             if (wallpaper == null) {
-                if (Preferences.getPreferences(this).isDownloadedOnly())
-                    Preferences.getPreferences(this).setDownloadedOnly(false);
+                if (Preferences.get(this).isDownloadedOnly())
+                    Preferences.get(this).setDownloadedOnly(false);
                 wallpaper = mMuzeiHelper.getRandomWallpaper(wallpaperUrl);
             }
 
-            if (Preferences.getPreferences(this).isConnectedAsPreferred())
+            if (Preferences.get(this).isConnectedAsPreferred())
                 if (wallpaper != null) publishArtwork(wallpaper);
         } catch (Exception ignored) {}
     }
 
     private void publishArtwork(Wallpaper wallpaper) {
-        File file = new File(Preferences.getPreferences(this).getWallsDirectory()
-                + wallpaper.getName() + FileHelper.IMAGE_EXTENSION);
+        Uri uri = Uri.parse(wallpaper.getURL());
+        if (WallpaperHelper.isWallpaperSaved(this, wallpaper) && PermissionHelper.isStorageGranted(this)) {
+            String fileName = wallpaper.getName() +"."+ WallpaperHelper.getFormat(wallpaper.getMimeType());
+            File directory = WallpaperHelper.getDefaultWallpapersDirectory(this);
+            File target = new File(directory, fileName);
+
+            uri = Uri.fromFile(target);
+        }
+
         publishArtwork(new Artwork.Builder()
                 .title(wallpaper.getName())
                 .byline(wallpaper.getAuthor())
-                .imageUri(file.exists() ?
-                        Uri.fromFile(file) :
-                        Uri.parse(wallpaper.getURL()))
+                .imageUri(uri)
                 .build());
 
         scheduleUpdate(System.currentTimeMillis() +
-                Preferences.getPreferences(this).getRotateTime());
-    }
+                Preferences.get(this).getRotateTime());
 
+        Database.get(this).closeDatabase();
+    }
 }
 

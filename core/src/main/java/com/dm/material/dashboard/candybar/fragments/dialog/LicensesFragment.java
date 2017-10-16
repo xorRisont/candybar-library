@@ -15,7 +15,9 @@ import android.webkit.WebView;
 
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.dm.material.dashboard.candybar.R;
-import com.dm.material.dashboard.candybar.utils.Tag;
+import com.dm.material.dashboard.candybar.helpers.LocaleHelper;
+import com.dm.material.dashboard.candybar.helpers.TypefaceHelper;
+import com.dm.material.dashboard.candybar.utils.LogUtil;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -41,6 +43,10 @@ import java.io.InputStreamReader;
 
 public class LicensesFragment extends DialogFragment {
 
+    private WebView mWebView;
+
+    private AsyncTask<Void, Void, Boolean> mLoadLicenses;
+
     private static final String TAG = "candybar.dialog.licenses";
 
     private static LicensesFragment newInstance() {
@@ -53,22 +59,22 @@ public class LicensesFragment extends DialogFragment {
         if (prev != null) {
             ft.remove(prev);
         }
-        ft.addToBackStack(null);
 
-        DialogFragment dialog = LicensesFragment.newInstance();
-        dialog.show(ft, TAG);
+        try {
+            DialogFragment dialog = LicensesFragment.newInstance();
+            dialog.show(ft, TAG);
+        } catch (IllegalArgumentException | IllegalStateException ignored) {}
     }
-
-    private WebView mWebView;
-
-    private AsyncTask<Void, Void, Boolean> mLoadLicenses;
 
     @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         MaterialDialog.Builder builder = new MaterialDialog.Builder(getActivity());
         builder.customView(R.layout.fragment_licenses, false);
-        builder.title(R.string.open_source_licenses);
+        builder.typeface(
+                TypefaceHelper.getMedium(getActivity()),
+                TypefaceHelper.getRegular(getActivity()));
+        builder.title(R.string.about_open_source_licenses);
         MaterialDialog dialog = builder.build();
         dialog.show();
 
@@ -117,7 +123,7 @@ public class LicensesFragment extends DialogFragment {
                         bufferedReader.close();
                         return true;
                     } catch (Exception e) {
-                        Log.d(Tag.LOG_TAG, Log.getStackTraceString(e));
+                        LogUtil.e(Log.getStackTraceString(e));
                         return false;
                     }
                 }
@@ -127,17 +133,20 @@ public class LicensesFragment extends DialogFragment {
             @Override
             protected void onPostExecute(Boolean aBoolean) {
                 super.onPostExecute(aBoolean);
+                mLoadLicenses = null;
+
+                if (getActivity() == null) return;
+                if (getActivity().isFinishing()) return;
+
+                LocaleHelper.setLocale(getActivity());
                 if (aBoolean) {
                     mWebView.setVisibility(View.VISIBLE);
                     mWebView.loadDataWithBaseURL(null,
                             sb.toString(), "text/html", "utf-8", null);
                 }
-                mLoadLicenses = null;
             }
-
         }.execute();
     }
-
 }
 
 

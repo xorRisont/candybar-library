@@ -12,17 +12,16 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.webkit.URLUtil;
 import android.widget.NumberPicker;
 import android.widget.RadioButton;
 import android.widget.Toast;
 
+import com.danimahardhika.android.helpers.core.ColorHelper;
 import com.dm.material.dashboard.candybar.R;
-import com.dm.material.dashboard.candybar.helpers.ColorHelper;
-import com.dm.material.dashboard.candybar.helpers.DrawableHelper;
-import com.dm.material.dashboard.candybar.helpers.ViewHelper;
+import com.dm.material.dashboard.candybar.helpers.LocaleHelper;
+import com.dm.material.dashboard.candybar.helpers.WallpaperHelper;
 import com.dm.material.dashboard.candybar.preferences.Preferences;
-import com.dm.material.dashboard.candybar.utils.Tag;
+import com.dm.material.dashboard.candybar.utils.LogUtil;
 
 import uk.co.chrisjenx.calligraphy.CalligraphyContextWrapper;
 
@@ -55,14 +54,15 @@ public class CandyBarMuzeiActivity extends AppCompatActivity implements View.OnC
     private Class<?> mMuzeiService;
 
     public void initMuzeiActivity(Bundle savedInstanceState, Class<?> muzeiService) {
-        super.setTheme(Preferences.getPreferences(this).isDarkTheme() ?
+        super.setTheme(Preferences.get(this).isDarkTheme() ?
                 R.style.AppThemeDark : R.style.AppTheme);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_muzei);
-        getWindow().getDecorView().setBackgroundColor(
-                ColorHelper.getAttributeColor(this, R.attr.main_background));
+        ColorHelper.setupStatusBarIconColor(this);
         ColorHelper.setStatusBarColor(this, ColorHelper.getAttributeColor(this, R.attr.colorPrimaryDark));
-        ViewHelper.resetNavigationBarTranslucent(this, getResources().getConfiguration().orientation);
+        ColorHelper.setNavigationBarColor(this, ContextCompat.getColor(this,
+                Preferences.get(this).isDarkTheme() ?
+                        R.color.navigationBarDark : R.color.navigationBar));
 
         mMinute = (RadioButton) findViewById(R.id.minute);
         mHour = (RadioButton) findViewById(R.id.hour);
@@ -82,33 +82,31 @@ public class CandyBarMuzeiActivity extends AppCompatActivity implements View.OnC
         mMinute.setOnClickListener(this);
         mHour.setOnClickListener(this);
 
-        mWifiOnly.setChecked(Preferences.getPreferences(this).isWifiOnly());
-        mDownloadedOnly.setChecked(Preferences.getPreferences(this).isDownloadedOnly());
-        mMinute.setChecked(Preferences.getPreferences(this).isRotateMinute());
+        mWifiOnly.setChecked(Preferences.get(this).isWifiOnly());
+        mDownloadedOnly.setChecked(Preferences.get(this).isDownloadedOnly());
+        mMinute.setChecked(Preferences.get(this).isRotateMinute());
         mHour.setChecked(!mMinute.isChecked());
 
-        int rotateTime = convertMilliToMinute(Preferences.getPreferences(this).getRotateTime());
+        int rotateTime = convertMilliToMinute(Preferences.get(this).getRotateTime());
         if (!mMinute.isChecked()) rotateTime = rotateTime / 60;
         mNumberPicker.setValue(rotateTime);
     }
 
     @Override
-    public void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-        ViewHelper.resetNavigationBarTranslucent(this, newConfig.orientation);
+    protected void attachBaseContext(Context newBase) {
+        LocaleHelper.setLocale(newBase);
+        super.attachBaseContext(CalligraphyContextWrapper.wrap(newBase));
     }
 
     @Override
-    protected void attachBaseContext(Context newBase) {
-        super.attachBaseContext(CalligraphyContextWrapper.wrap(newBase));
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        LocaleHelper.setLocale(this);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_muzei, menu);
-        MenuItem save = menu.findItem(R.id.menu_save);
-        int color = ColorHelper.getAttributeColor(this, R.attr.toolbar_icon);
-        save.setIcon(DrawableHelper.getTintedDrawable(this, R.drawable.ic_toolbar_save, color));
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -116,8 +114,7 @@ public class CandyBarMuzeiActivity extends AppCompatActivity implements View.OnC
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.menu_save) {
-            String url = getResources().getString(R.string.wallpaper_json);
-            if (!URLUtil.isValidUrl(url)) {
+            if (WallpaperHelper.getWallpaperType(this) != WallpaperHelper.CLOUD_WALLPAPERS) {
                 Toast.makeText(this, R.string.muzei_settings_ignored,
                         Toast.LENGTH_SHORT).show();
                 finish();
@@ -127,10 +124,15 @@ public class CandyBarMuzeiActivity extends AppCompatActivity implements View.OnC
             int rotateTime = convertMinuteToMilli(mNumberPicker.getValue());
             if (!mMinute.isChecked()) rotateTime = rotateTime * 60;
 
-            Preferences.getPreferences(this).setRotateMinute(mMinute.isChecked());
-            Preferences.getPreferences(this).setRotateTime(rotateTime);
-            Preferences.getPreferences(this).setWifiOnly(mWifiOnly.isChecked());
-            Preferences.getPreferences(this).setDownloadedOnly(mDownloadedOnly.isChecked());
+            Preferences.get(this).setRotateMinute(mMinute.isChecked());
+            Preferences.get(this).setRotateTime(rotateTime);
+            Preferences.get(this).setWifiOnly(mWifiOnly.isChecked());
+            Preferences.get(this).setDownloadedOnly(mDownloadedOnly.isChecked());
+
+            if (mMuzeiService == null) {
+                LogUtil.e("MuzeiService cannot be null");
+                return true;
+            }
 
             Intent intent = new Intent(this, mMuzeiService);
             intent.putExtra("restart", true);
@@ -176,11 +178,11 @@ public class CandyBarMuzeiActivity extends AppCompatActivity implements View.OnC
                 pf.setAccessible(true);
                 try {
                     pf.set(picker, ContextCompat.getDrawable(this,
-                            Preferences.getPreferences(this).isDarkTheme() ?
+                            Preferences.get(this).isDarkTheme() ?
                                     R.drawable.numberpicker_divider_dark :
                                     R.drawable.numberpicker_divider));
                 } catch (Exception e) {
-                    Log.d(Tag.LOG_TAG, Log.getStackTraceString(e));
+                    LogUtil.e(Log.getStackTraceString(e));
                 }
                 break;
             }
