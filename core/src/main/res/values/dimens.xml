@@ -44,7 +44,7 @@
     <dimen name="tab_text">14sp</dimen>
 
     <!-- Splash Screen -->
-    <dimen name="splash_screen_logo">96dp</dimen>
+    <dimen name="splash_screen_logo">256dp</dimen>
     <dimen name="splash_screen_text">14sp</dimen>
 
     <!-- Navigation view width -->
