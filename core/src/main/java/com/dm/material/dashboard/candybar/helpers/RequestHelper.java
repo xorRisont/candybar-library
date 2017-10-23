@@ -357,7 +357,7 @@ public class RequestHelper {
                 case APPMAP:
                     return  "\t<!-- " + request.getName() + " -->" +
                             "\n" +
-                            "\t<item class=\"" + request.getPackageName() + "\" name=\"" +
+                            "\t<item class=\"" + request.getActivity() + "\" name=\"" +
                             request.getName().toLowerCase().replace(" ", "_") +
                             "\" />" +
                             "\n\n";
