@@ -143,7 +143,8 @@ public class RequestHelper {
         } catch (Exception ignored) {}
 
         for (ResolveInfo app : installedApps) {
-            String packageName = app.activityInfo.packageName;
+            //String packageName = app.activityInfo.packageName;
+            String packageName = app.activityInfo.name;
             String activity = packageName +"/"+ app.activityInfo.name;
 
             String value = appFilter.get(activity);
@@ -357,7 +358,7 @@ public class RequestHelper {
                 case APPMAP:
                     return  "\t<!-- " + request.getName() + " -->" +
                             "\n" +
-                            "\t<item class=\"" + request.getActivity() + "\" name=\"" +
+                            "\t<item class=\"" + request.getPackageName() + "\" name=\"" +
                             request.getName().toLowerCase().replace(" ", "_") +
                             "\" />" +
                             "\n\n";
