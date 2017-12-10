@@ -10,6 +10,7 @@ import android.webkit.URLUtil;
 
 import com.danimahardhika.android.helpers.core.ColorHelper;
 import com.danimahardhika.android.helpers.core.FileHelper;
+import com.danimahardhika.android.helpers.core.utils.LogUtil;
 import com.danimahardhika.cafebar.CafeBar;
 import com.danimahardhika.cafebar.CafeBarTheme;
 import com.dm.material.dashboard.candybar.R;
@@ -106,7 +107,9 @@ public class WallpaperDownloader {
         DownloadManager downloadManager = (DownloadManager) mContext.getSystemService(Context.DOWNLOAD_SERVICE);
 
         try {
-            downloadManager.enqueue(request);
+            if (downloadManager != null) {
+                downloadManager.enqueue(request);
+            }
         } catch (IllegalArgumentException e) {
             LogUtil.e(Log.getStackTraceString(e));
             return;

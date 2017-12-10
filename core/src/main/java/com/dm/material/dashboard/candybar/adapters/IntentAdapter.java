@@ -26,7 +26,7 @@ import com.dm.material.dashboard.candybar.items.IntentChooser;
 import com.dm.material.dashboard.candybar.items.Request;
 import com.dm.material.dashboard.candybar.tasks.IconRequestBuilderTask;
 import com.dm.material.dashboard.candybar.tasks.PremiumRequestBuilderTask;
-import com.dm.material.dashboard.candybar.utils.LogUtil;
+import com.danimahardhika.android.helpers.core.utils.LogUtil;
 
 import java.util.List;
 
@@ -170,11 +170,11 @@ public class IntentAdapter extends BaseAdapter {
         private final MaterialProgressBar progressBar;
 
         ViewHolder(View view) {
-            name = (TextView) view.findViewById(R.id.name);
-            type = (TextView) view.findViewById(R.id.type);
-            icon = (ImageView) view.findViewById(R.id.icon);
-            container = (LinearLayout) view.findViewById(R.id.container);
-            progressBar = (MaterialProgressBar) view.findViewById(R.id.progress);
+            name = view.findViewById(R.id.name);
+            type = view.findViewById(R.id.type);
+            icon = view.findViewById(R.id.icon);
+            container = view.findViewById(R.id.container);
+            progressBar = view.findViewById(R.id.progress);
         }
     }
 }

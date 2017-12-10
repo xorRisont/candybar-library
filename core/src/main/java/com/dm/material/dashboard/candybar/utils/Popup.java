@@ -19,6 +19,7 @@ import android.widget.TextView;
 
 import com.danimahardhika.android.helpers.core.ColorHelper;
 import com.danimahardhika.android.helpers.core.DrawableHelper;
+import com.danimahardhika.android.helpers.core.utils.LogUtil;
 import com.dm.material.dashboard.candybar.R;
 import com.dm.material.dashboard.candybar.helpers.TypefaceHelper;
 import com.dm.material.dashboard.candybar.items.PopupItem;
@@ -245,8 +246,8 @@ public class Popup {
             TextView title;
 
             ViewHolder(@NonNull View view) {
-                checkBox = (AppCompatCheckBox) view.findViewById(R.id.checkbox);
-                title = (TextView) view.findViewById(R.id.title);
+                checkBox = view.findViewById(R.id.checkbox);
+                title = view.findViewById(R.id.title);
             }
         }
 
