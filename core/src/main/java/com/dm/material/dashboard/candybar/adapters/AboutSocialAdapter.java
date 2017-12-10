@@ -16,7 +16,7 @@ import android.widget.ImageView;
 import com.dm.material.dashboard.candybar.R;
 import com.dm.material.dashboard.candybar.applications.CandyBarApplication;
 import com.dm.material.dashboard.candybar.helpers.UrlHelper;
-import com.dm.material.dashboard.candybar.utils.LogUtil;
+import com.danimahardhika.android.helpers.core.utils.LogUtil;
 
 /*
  * CandyBar - Material Dashboard
@@ -82,7 +82,7 @@ public class AboutSocialAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
         SocialViewHolder(View itemView) {
             super(itemView);
-            image = (ImageView) itemView.findViewById(R.id.image);
+            image = itemView.findViewById(R.id.image);
 
             image.setOnClickListener(this);
         }

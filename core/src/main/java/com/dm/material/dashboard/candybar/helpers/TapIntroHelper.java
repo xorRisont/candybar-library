@@ -19,7 +19,7 @@ import com.danimahardhika.android.helpers.core.ColorHelper;
 import com.dm.material.dashboard.candybar.R;
 import com.dm.material.dashboard.candybar.adapters.HomeAdapter;
 import com.dm.material.dashboard.candybar.preferences.Preferences;
-import com.dm.material.dashboard.candybar.utils.LogUtil;
+import com.danimahardhika.android.helpers.core.utils.LogUtil;
 import com.getkeepsafe.taptargetview.TapTarget;
 import com.getkeepsafe.taptargetview.TapTargetSequence;
 import com.getkeepsafe.taptargetview.TapTargetView;
@@ -51,7 +51,7 @@ public class TapIntroHelper {
         if (Preferences.get(context).isTimeToShowHomeIntro()) {
             AppCompatActivity activity = (AppCompatActivity) context;
 
-            Toolbar toolbar = (Toolbar) activity.findViewById(R.id.toolbar);
+            Toolbar toolbar = activity.findViewById(R.id.toolbar);
 
             new Handler().postDelayed(() -> {
                 try {
@@ -156,7 +156,7 @@ public class TapIntroHelper {
         if (Preferences.get(context).isTimeToShowIconsIntro()) {
             AppCompatActivity activity = (AppCompatActivity) context;
 
-            Toolbar toolbar = (Toolbar) activity.findViewById(R.id.toolbar);
+            Toolbar toolbar = activity.findViewById(R.id.toolbar);
             if (toolbar == null) return;
 
             new Handler().postDelayed(() -> {
@@ -209,7 +209,7 @@ public class TapIntroHelper {
                     ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
             activity.setRequestedOrientation(requestOrientation);
 
-            Toolbar toolbar = (Toolbar) activity.findViewById(R.id.toolbar);
+            Toolbar toolbar = activity.findViewById(R.id.toolbar);
 
             new Handler().postDelayed(() -> {
                 try {

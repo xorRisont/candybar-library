@@ -14,7 +14,7 @@ import com.dm.material.dashboard.candybar.items.Request;
 import com.dm.material.dashboard.candybar.preferences.Preferences;
 import com.dm.material.dashboard.candybar.utils.ImageConfig;
 import com.dm.material.dashboard.candybar.utils.JsonStructure;
-import com.dm.material.dashboard.candybar.utils.LogUtil;
+import com.danimahardhika.android.helpers.core.utils.LogUtil;
 import com.nostra13.universalimageloader.core.ImageLoader;
 
 import java.text.SimpleDateFormat;
@@ -61,7 +61,6 @@ public abstract class CandyBarApplication extends Application implements Applica
     @Override
     public void onCreate() {
         super.onCreate();
-        mConfiguration = onInit();
         Database.get(this).openDatabase();
 
         if (!ImageLoader.getInstance().isInited())
@@ -73,7 +72,10 @@ public abstract class CandyBarApplication extends Application implements Applica
                 .build());
 
         //Enable or disable logging
+        LogUtil.setLoggingTag(getString(R.string.app_name));
         LogUtil.setLoggingEnabled(true);
+
+        mConfiguration = onInit();
 
         if (mConfiguration.mIsCrashReportEnabled) {
             mHandler = Thread.getDefaultUncaughtExceptionHandler();

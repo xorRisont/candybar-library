@@ -25,6 +25,7 @@ import android.widget.TextView;
 
 import com.danimahardhika.android.helpers.core.ColorHelper;
 import com.danimahardhika.android.helpers.core.DrawableHelper;
+import com.danimahardhika.android.helpers.core.utils.LogUtil;
 import com.dm.material.dashboard.candybar.R;
 import com.dm.material.dashboard.candybar.applications.CandyBarApplication;
 import com.dm.material.dashboard.candybar.fragments.dialog.CreditsFragment;
@@ -32,7 +33,6 @@ import com.dm.material.dashboard.candybar.fragments.dialog.LicensesFragment;
 import com.dm.material.dashboard.candybar.helpers.ConfigurationHelper;
 import com.dm.material.dashboard.candybar.preferences.Preferences;
 import com.dm.material.dashboard.candybar.utils.ImageConfig;
-import com.dm.material.dashboard.candybar.utils.LogUtil;
 import com.mikhaellopez.circularimageview.CircularImageView;
 import com.nostra13.universalimageloader.core.ImageLoader;
 
@@ -161,10 +161,10 @@ public class AboutAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
         HeaderViewHolder(View itemView) {
             super(itemView);
-            image = (ImageView) itemView.findViewById(R.id.image);
-            profile = (CircularImageView) itemView.findViewById(R.id.profile);
-            HtmlTextView subtitle = (HtmlTextView) itemView.findViewById(R.id.subtitle);
-            RecyclerView recyclerView = (RecyclerView) itemView.findViewById(R.id.recyclerview);
+            image = itemView.findViewById(R.id.image);
+            profile = itemView.findViewById(R.id.profile);
+            HtmlTextView subtitle = itemView.findViewById(R.id.subtitle);
+            RecyclerView recyclerView = itemView.findViewById(R.id.recyclerview);
             recyclerView.setItemAnimator(new DefaultItemAnimator());
             recyclerView.setLayoutManager(new LinearLayoutManager(mContext, LinearLayoutManager.HORIZONTAL, true));
             recyclerView.setHasFixedSize(true);
@@ -190,7 +190,7 @@ public class AboutAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 recyclerView.setAdapter(new AboutSocialAdapter(mContext, urls));
             }
 
-            CardView card = (CardView) itemView.findViewById(R.id.card);
+            CardView card = itemView.findViewById(R.id.card);
             if (CandyBarApplication.getConfiguration().getAboutStyle() == CandyBarApplication.Style.PORTRAIT_FLAT_LANDSCAPE_FLAT &&
                     card != null) {
                 if (card.getLayoutParams() instanceof StaggeredGridLayoutManager.LayoutParams) {
@@ -221,9 +221,9 @@ public class AboutAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
         ContributorsViewHolder(View itemView) {
             super(itemView);
-            TextView title = (TextView) itemView.findViewById(R.id.title);
+            TextView title = itemView.findViewById(R.id.title);
 
-            CardView card = (CardView) itemView.findViewById(R.id.card);
+            CardView card = itemView.findViewById(R.id.card);
             if (CandyBarApplication.getConfiguration().getAboutStyle() == CandyBarApplication.Style.PORTRAIT_FLAT_LANDSCAPE_FLAT &&
                     card != null) {
                 if (card.getLayoutParams() instanceof StaggeredGridLayoutManager.LayoutParams) {
@@ -262,15 +262,15 @@ public class AboutAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
         FooterViewHolder(View itemView) {
             super(itemView);
-            ImageView instagram = (ImageView) itemView.findViewById(R.id.about_dev_instagram);
-            ImageView googlePlus = (ImageView) itemView.findViewById(R.id.about_dev_google_plus);
-            ImageView github = (ImageView) itemView.findViewById(R.id.about_dev_github);
-            TextView title = (TextView) itemView.findViewById(R.id.about_dashboard_title);
-            TextView licenses = (TextView) itemView.findViewById(R.id.about_dashboard_licenses);
-            TextView contributors = (TextView) itemView.findViewById(R.id.about_dashboard_contributors);
-            TextView translator = (TextView) itemView.findViewById(R.id.about_dashboard_translator);
+            ImageView instagram = itemView.findViewById(R.id.about_dev_instagram);
+            ImageView googlePlus = itemView.findViewById(R.id.about_dev_google_plus);
+            ImageView github = itemView.findViewById(R.id.about_dev_github);
+            TextView title = itemView.findViewById(R.id.about_dashboard_title);
+            TextView licenses = itemView.findViewById(R.id.about_dashboard_licenses);
+            TextView contributors = itemView.findViewById(R.id.about_dashboard_contributors);
+            TextView translator = itemView.findViewById(R.id.about_dashboard_translator);
 
-            CardView card = (CardView) itemView.findViewById(R.id.card);
+            CardView card = itemView.findViewById(R.id.card);
             if (CandyBarApplication.getConfiguration().getAboutStyle() == CandyBarApplication.Style.PORTRAIT_FLAT_LANDSCAPE_FLAT &&
                     card != null) {
                 if (card.getLayoutParams() instanceof StaggeredGridLayoutManager.LayoutParams) {
