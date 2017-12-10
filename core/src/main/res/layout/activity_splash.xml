@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    android:background="@color/backgroundSplashColo">
+    android:background="@color/backgroundSplashColor">
 
     <ImageView
         android:layout_width="@dimen/splash_screen_logo"
