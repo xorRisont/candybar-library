@@ -16,6 +16,7 @@
 
     <!-- Splash Screen -->
     <color name="splashColor">#FAFAFA</color>
+    <color name="backgroundSplashColo">#383838</color>
 
     <!-- Navigation View -->
     <color name="navigationViewTitle">#FFFFFF</color>
